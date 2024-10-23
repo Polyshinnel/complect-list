@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('set_lists', function (Blueprint $table) {
             $table->id();
+            $table->integer('variant_id');
+            $table->string('name');
+            $table->string('sku');
+            $table->decimal('price')->default(0);
+            $table->integer('quantity')->default(0);
             $table->timestamps();
         });
     }
