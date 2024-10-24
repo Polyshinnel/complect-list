@@ -26,7 +26,7 @@ class SetService
         if(!$setListItemDB) {
             $setListItemDB = $this->addSetToDB($setList);
         }
-        $this->setProductService->manupulateProductList($setListItemDB, $setProducts);
+        $this->setProductService->manageProductList($setListItemDB, $setProducts);
     }
 
     public function checkSetDb(array $setListItem): ?SetList

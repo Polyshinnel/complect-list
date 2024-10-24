@@ -28,7 +28,7 @@ class SetProductService
         $this->setListRepository = $setListRepository;
     }
 
-    public function manupulateProductList(SetList $setListItemDB, array $setProductList): void
+    public function manageProductList(SetList $setListItemDB, array $setProductList): void
     {
         $setListItemId = $setListItemDB->id;
         $setProductsDB = $this->setProductRepository->getSetProducts($setListItemId);
@@ -60,6 +60,7 @@ class SetProductService
                 } else {
                     $this->setProductRepository->deleteSetBySetIdProduct($setListItemId);
                     $this->setListRepository->deleteSetList($setListItemId);
+                    break;
                 }
 
             }
