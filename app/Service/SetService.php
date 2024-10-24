@@ -1,17 +1,32 @@
 <?php
 
-namespace App\Service\Set;
+namespace App\Service;
 
 use App\Models\SetList;
-use App\Repository\Set\SetListRepository;
+use App\Repository\SetListRepository;
 
 class SetService
 {
     protected SetListRepository $setListRepository;
+    protected SetProductService $setProductService;
 
-    public function __construct(SetListRepository $setListRepository)
+    public function __construct(
+        SetListRepository $setListRepository,
+        SetProductService $setProductService
+    )
     {
         $this->setListRepository = $setListRepository;
+        $this->setProductService = $setProductService;
+    }
+
+    public function processingSetList(array $setList): void
+    {
+        $setListItemDB = $this->checkSetDb($setList);
+        $setProducts = $setList['items'];
+        if(!$setListItemDB) {
+            $setListItemDB = $this->addSetToDB($setList);
+        }
+        $this->setProductService->manupulateProductList($setListItemDB, $setProducts);
     }
 
     public function checkSetDb(array $setListItem): ?SetList
@@ -28,7 +43,7 @@ class SetService
         return null;
     }
 
-    public function addSetToDB(array $setListItem): int
+    public function addSetToDB(array $setListItem): SetList
     {
         $createArr = [
             'variant_id' => $setListItem['variant_id_set'],
@@ -36,8 +51,7 @@ class SetService
             'sku' => $setListItem['set_sku']
         ];
 
-        $setItem = $this->setListRepository->createSetList($createArr);
-        return $setItem->id;
+        return $this->setListRepository->createSetList($createArr);
     }
 
     public function updateSetPriceQuantity(float $price, int $quantity, string $setItemSku): void

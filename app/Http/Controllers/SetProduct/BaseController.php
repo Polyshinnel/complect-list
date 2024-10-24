@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Set;
+namespace App\Http\Controllers\SetProduct;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-class GetSetListController extends Controller
+class BaseController extends Controller
 {
     //
 }

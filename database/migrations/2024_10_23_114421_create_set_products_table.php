@@ -14,17 +14,20 @@ return new class extends Migration
         Schema::create('set_products', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('set_id');
+            $table->unsignedBigInteger('product_id');
             $table->integer('variant_id');
             $table->string('sku');
-            $table->string('name');
-            $table->decimal('price')->default(0);
-            $table->integer('quantity')->default(0);
             $table->integer('set_quantity');
             $table->timestamps();
 
             $table->index('set_id', 'set_products_set_id_index');
             $table->foreign('set_id', 'set_products_set_id_fk')
                 ->on('set_lists')
+                ->references('id');
+
+            $table->index('product_id', 'set_products_product_id_index');
+            $table->foreign('product_id', 'set_products_product_id_fk')
+                ->on('products')
                 ->references('id');
         });
     }

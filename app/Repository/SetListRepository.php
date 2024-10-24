@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repository\Set;
+namespace App\Repository;
 
 use App\Models\SetList;
 
@@ -23,5 +23,10 @@ class SetListRepository
     public function updateSetList(string $sku, array $updateArr): void
     {
         SetList::where('sku', $sku)->update($updateArr);
+    }
+
+    public function deleteSetList(int $id): void
+    {
+        SetList::where(['id' => $id])->delete();
     }
 }
