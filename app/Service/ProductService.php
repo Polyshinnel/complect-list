@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Http\Controllers\Product\GetProductController;
 use App\Models\Product;
 use App\Repository\ProductRepository;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class ProductService
@@ -41,5 +42,10 @@ class ProductService
             }
 
         }
+    }
+
+    public function getDatabaseProducts(): ?Collection
+    {
+
     }
 }
