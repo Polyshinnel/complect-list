@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Models\SetList;
+use Illuminate\Support\Collection;
 
 class SetListRepository
 {
@@ -28,5 +29,10 @@ class SetListRepository
     public function deleteSetList(int $id): void
     {
         SetList::where(['id' => $id])->delete();
+    }
+
+    public function getSetListAll(): ?Collection
+    {
+        return SetList::all();
     }
 }

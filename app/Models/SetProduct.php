@@ -14,6 +14,6 @@ class SetProduct extends Model
 
     public function getProductInfo(): HasOne
     {
-        return $this->hasOne(Product::class, 'product_id', 'id');
+        return $this->hasOne(Product::class, 'id', 'product_id');
     }
 }

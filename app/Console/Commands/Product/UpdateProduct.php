@@ -2,14 +2,22 @@
 
 namespace App\Console\Commands\Product;
 
+use App\Http\Requests\ProductRequest;
+use App\Service\ProductService;
 use Illuminate\Console\Command;
 
 class UpdateProduct extends Command
 {
-    public function __construct()
+    public ProductService $productService;
+    public ProductRequest $productRequest;
+    public function __construct(
+        ProductService $productService,
+        ProductRequest $productRequest
+    )
     {
         parent::__construct();
-
+        $this->productService = $productService;
+        $this->productRequest = $productRequest;
     }
     /**
      * The name and signature of the console command.
@@ -23,13 +31,17 @@ class UpdateProduct extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Обновление товаров';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        //
+        $skuList = $this->productService->getDatabaseProductsSkuList();
+        $products = $this->productRequest->getProductsBySku($skuList);
+        $this->productService->updateProducts($products);
+        echo "products updated successfully\n";
+        return 0;
     }
 }

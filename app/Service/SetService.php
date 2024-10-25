@@ -4,19 +4,23 @@ namespace App\Service;
 
 use App\Models\SetList;
 use App\Repository\SetListRepository;
+use App\Repository\SetProductRepository;
 
 class SetService
 {
     protected SetListRepository $setListRepository;
     protected SetProductService $setProductService;
+    protected SetProductRepository $setProductRepository;
 
     public function __construct(
         SetListRepository $setListRepository,
-        SetProductService $setProductService
+        SetProductService $setProductService,
+        SetProductRepository $setProductRepository
     )
     {
         $this->setListRepository = $setListRepository;
         $this->setProductService = $setProductService;
+        $this->setProductRepository = $setProductRepository;
     }
 
     public function processingSetList(array $setList): void
@@ -54,13 +58,46 @@ class SetService
         return $this->setListRepository->createSetList($createArr);
     }
 
-    public function updateSetPriceQuantity(float $price, int $quantity, string $setItemSku): void
+    public function calculateSetPriceAndQuantity(): void
     {
-        $updateArr = [
-            'quantity' => $quantity,
-            'price' => $price,
-        ];
+        $setList = $this->setListRepository->getSetListAll();
+        if(!$setList->isEmpty()) {
+            foreach ($setList as $setListItem) {
+                $setListProducts = $this->setProductRepository->getSetProducts($setListItem->id);
+                $quantity = 0;
+                $price = 0;
+                $productList = [];
 
-        $this->setListRepository->updateSetList($setItemSku, $updateArr);
+                if(!$setListProducts->isEmpty()) {
+                    foreach ($setListProducts as $setListProduct) {
+                        $productInfo = $setListProduct->getProductInfo;
+                        $setCurrentQuantity = floor($productInfo-> quantity/ $setListProduct->set_quantity);
+                        $setPrice = ceil($productInfo->price * $setListProduct->set_quantity);
+                        $productList[] = [
+                            'quantity' => $productInfo->quantity,
+                            'price' => $productInfo->price,
+                            'set_required_quantity' => $setListProduct->set_quantity,
+                            'set_price' => $setPrice,
+                            'set_current_quantity' => (int)$setCurrentQuantity,
+                        ];
+                        $price += $setPrice;
+                    }
+                }
+
+                if($productList) {
+                    usort($productList, function ($a, $b) {
+                        if ($a['set_current_quantity'] == $b['set_current_quantity']) return 0;
+                        return ($a['set_current_quantity'] > $b['set_current_quantity']) ? 1 : -1;
+                    });
+                    $quantity = $productList[0]['set_current_quantity'];
+                }
+
+                $updateArr = [
+                    'price' => $price,
+                    'quantity' => $quantity,
+                ];
+                $setListItem->update($updateArr);
+            }
+        }
     }
 }

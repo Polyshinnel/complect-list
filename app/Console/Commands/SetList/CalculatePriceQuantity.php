@@ -2,10 +2,18 @@
 
 namespace App\Console\Commands\SetList;
 
+use App\Service\SetService;
 use Illuminate\Console\Command;
 
 class CalculatePriceQuantity extends Command
 {
+    public SetService $setService;
+
+    public function __construct(SetService $setService)
+    {
+        parent::__construct();
+        $this->setService = $setService;
+    }
     /**
      * The name and signature of the console command.
      *
@@ -25,6 +33,6 @@ class CalculatePriceQuantity extends Command
      */
     public function handle()
     {
-        //
+        $this->setService->calculateSetPriceAndQuantity();
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Service;
 
-use App\Http\Controllers\Product\GetProductController;
+use App\Http\Requests\ProductRequest;
 use App\Models\Product;
 use App\Repository\ProductRepository;
 use Illuminate\Support\Collection;
@@ -11,14 +11,14 @@ use Illuminate\Support\Facades\Log;
 class ProductService
 {
     public ProductRepository $productRepository;
-    public GetProductController $getProductController;
+    public ProductRequest $productRequest;
 
     public function __construct(
         ProductRepository $productRepository,
-        GetProductController $getProductController
+        ProductRequest $productRequest
     ){
         $this->productRepository = $productRepository;
-        $this->getProductController = $getProductController;
+        $this->productRequest = $productRequest;
     }
 
     public function getOrCreateProduct($product): ?Product
@@ -27,7 +27,7 @@ class ProductService
         if($productInfo){
             return $productInfo;
         } else {
-            $productRaw = $this->getProductController->getProductsBySku([$product['sku']]);
+            $productRaw = $this->productRequest->getProductsBySku([$product['sku']]);
             if($productRaw){
                 $createArr = [
                     'name' => $productRaw[0]['name'],
@@ -44,8 +44,36 @@ class ProductService
         }
     }
 
-    public function getDatabaseProducts(): ?Collection
+    public function getDatabaseProductsSkuList(): array
     {
+        $products = $this->productRepository->getAllProducts();
+        $sku = [];
+        if(!$products->isEmpty()){
+            foreach($products as $product){
+                $sku[] = $product->sku;
+            }
+        }
 
+        return $sku;
+    }
+
+    public function updateProducts(array $products): void
+    {
+        if($products) {
+            foreach($products as $product){
+                $quantity = $product['quantity'];
+                $price = $product['price'];
+                $sku = $product['vendor_code'];
+
+                $productInfo = $this->productRepository->getProductBySku($sku);
+                if($productInfo->quantity != $quantity || $productInfo->price != $price){
+                    $updateArr = [
+                        'quantity' => $quantity,
+                        'price' => $price
+                    ];
+                    $productInfo->update($updateArr);
+                }
+            }
+        }
     }
 }

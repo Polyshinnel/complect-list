@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Models\Product;
+use Illuminate\Support\Collection;
 
 class ProductRepository
 {
@@ -19,5 +20,10 @@ class ProductRepository
     public function updateProduct($sku, $updateArr): void
     {
         Product::where(['sku' => $sku])->update($updateArr);
+    }
+
+    public function getAllProducts(): ?Collection
+    {
+        return Product::all();
     }
 }

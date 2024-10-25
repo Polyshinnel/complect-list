@@ -1,11 +1,8 @@
 <?php
 
-namespace App\Http\Controllers\Product;
+namespace App\Http\Requests;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-
-class GetProductController extends Controller
+class ProductRequest
 {
     public function getProductsBySku(array $productSku): ?array
     {
