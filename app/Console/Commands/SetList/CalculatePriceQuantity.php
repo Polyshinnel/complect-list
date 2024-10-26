@@ -26,7 +26,7 @@ class CalculatePriceQuantity extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Расчет цен и количества комплектов';
 
     /**
      * Execute the console command.

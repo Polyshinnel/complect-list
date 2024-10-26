@@ -28,9 +28,14 @@ class SetService
         $setListItemDB = $this->checkSetDb($setList);
         $setProducts = $setList['items'];
         if(!$setListItemDB) {
-            $setListItemDB = $this->addSetToDB($setList);
+            $productToSetArr = $this->setProductService->manageProductList($setProducts, $setListItemDB);
+            if($productToSetArr) {
+                $setListItemDB = $this->addSetToDB($setList);
+                $this->setProductService->addProductsToSet($setListItemDB, $productToSetArr);
+            }
+        } else {
+            $this->setProductService->manageProductList($setProducts, $setListItemDB);
         }
-        $this->setProductService->manageProductList($setListItemDB, $setProducts);
     }
 
     public function checkSetDb(array $setListItem): ?SetList
