@@ -118,7 +118,7 @@ class SetService
                     'price' => $setListItem->price,
                     'vendor_code' => $setListItem->sku,
                     'quantity' => $setListItem->quantity,
-                    'vendor' => $setList->brand,
+                    'vendor' => $setListItem->brand,
                     'picture' => NULL,
                 ];
             }
