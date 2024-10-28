@@ -57,7 +57,8 @@ class SetService
         $createArr = [
             'variant_id' => $setListItem['variant_id_set'],
             'name' => $setListItem['product_name'],
-            'sku' => $setListItem['set_sku']
+            'sku' => $setListItem['set_sku'],
+            'brand' => $setListItem['brand']
         ];
 
         return $this->setListRepository->createSetList($createArr);
@@ -117,7 +118,7 @@ class SetService
                     'price' => $setListItem->price,
                     'vendor_code' => $setListItem->sku,
                     'quantity' => $setListItem->quantity,
-                    'vendor' => 'Housekult',
+                    'vendor' => $setList->brand,
                     'picture' => NULL,
                 ];
             }

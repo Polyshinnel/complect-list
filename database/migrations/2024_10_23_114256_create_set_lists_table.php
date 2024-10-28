@@ -16,6 +16,7 @@ return new class extends Migration
             $table->integer('variant_id');
             $table->string('name');
             $table->string('sku');
+            $table->string('brand');
             $table->decimal('price')->default(0);
             $table->integer('quantity')->default(0);
             $table->timestamps();
