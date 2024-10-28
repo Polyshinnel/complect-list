@@ -14,7 +14,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('set-list:get-set-list')->daily();
         $schedule->command('set-list:update-product')->everyTwoHours();
-        $schedule->command('set-list:update-product')->everyThreeHours($minutes = 0);
+        $schedule->command('set-list:calculate-price-quantity')->everyThreeHours($minutes = 0);
     }
 
     /**
