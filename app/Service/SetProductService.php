@@ -70,11 +70,12 @@ class SetProductService
                         if($setProductDB->set_quantity != $value['count']) {
                             $setProductId = $setProductDB->id;
                             $this->setProductRepository->updateSetProduct($setProductId, ['set_quantity' => $value['count']]);
-                            unset($setProductList[$key]);
                         }
+                        unset($setProductList[$key]);
                     }
                 }
             }
+
         }
         return $setProductList;
     }
