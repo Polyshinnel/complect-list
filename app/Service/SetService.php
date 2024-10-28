@@ -105,4 +105,24 @@ class SetService
             }
         }
     }
+
+    public function getSetList(): array
+    {
+        $setList = [];
+        $setListCollection = $this->setListRepository->getSetListAll();
+        if(!$setListCollection->isEmpty()) {
+            foreach ($setListCollection as $setListItem) {
+                $setList[] = [
+                    'name' => $setListItem->name,
+                    'price' => $setListItem->price,
+                    'vendor_code' => $setListItem->sku,
+                    'quantity' => $setListItem->quantity,
+                    'vendor' => 'Housekult',
+                    'picture' => NULL,
+                ];
+            }
+        }
+
+        return $setList;
+    }
 }

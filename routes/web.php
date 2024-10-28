@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Set\SetListView;
 use App\Http\Controllers\Set\SetStoreController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,4 +19,4 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/get-set', SetStoreController::class);
+Route::get('/get-set', SetListView::class);
