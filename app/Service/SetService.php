@@ -30,8 +30,10 @@ class SetService
         if(!$setListItemDB) {
             $productToSetArr = $this->setProductService->manageProductList($setProducts, $setListItemDB);
             if($productToSetArr) {
-                $setListItemDB = $this->addSetToDB($setList);
-                $this->setProductService->addProductsToSet($setListItemDB, $productToSetArr);
+                if($setList['brand']) {
+                    $setListItemDB = $this->addSetToDB($setList);
+                    $this->setProductService->addProductsToSet($setListItemDB, $productToSetArr);
+                }
             }
         } else {
             $this->setProductService->manageProductList($setProducts, $setListItemDB);

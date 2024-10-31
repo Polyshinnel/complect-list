@@ -12,9 +12,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('set-list:get-set-list')->daily();
-        $schedule->command('set-list:update-product')->everyTwoHours();
-        $schedule->command('set-list:calculate-price-quantity')->everyThreeHours($minutes = 0);
+        $schedule->command('set-list:get-set-list')->everyTenMinutes()->withoutOverlapping();
+        $schedule->command('set-list:update-product')->everyTenMinutes()->withoutOverlapping();
+        $schedule->command('set-list:calculate-price-quantity')->everyTenMinutes()->withoutOverlapping();
     }
 
     /**
