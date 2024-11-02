@@ -76,4 +76,23 @@ class ProductService
             }
         }
     }
+
+    public function checkProductUpdates(array $products, int $percent): bool
+    {
+        $countProducts = count($products);
+        $countProductsZero = 0;
+        foreach ($products as $product){
+            $quantity = $product['quantity'];
+            if($quantity == 0){
+                $countProductsZero++;
+            }
+        }
+
+        $percentZero = ($countProductsZero / $countProducts) * 100;
+
+        if($percentZero > $percent){
+            return false;
+        }
+        return true;
+    }
 }

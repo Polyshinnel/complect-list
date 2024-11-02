@@ -5,6 +5,7 @@ namespace App\Console\Commands\Product;
 use App\Http\Requests\ProductRequest;
 use App\Service\ProductService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class UpdateProduct extends Command
 {
@@ -40,8 +41,14 @@ class UpdateProduct extends Command
     {
         $skuList = $this->productService->getDatabaseProductsSkuList();
         $products = $this->productRequest->getProductsBySku($skuList);
-        $this->productService->updateProducts($products);
-        echo "products updated successfully\n";
+        if($this->productService->checkProductUpdates($products, 90)) {
+            $this->productService->updateProducts($products);
+            echo "products updated successfully\n";
+        } else {
+            Log::error('percent of products zero too high!');
+            echo "products update failed\n";
+        }
+
         return 0;
     }
 }
