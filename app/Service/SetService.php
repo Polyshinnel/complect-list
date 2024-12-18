@@ -45,8 +45,7 @@ class SetService
         $checkSetItem = $this
             ->setListRepository
             ->getSetListItem(
-                $setListItem['variant_id_set'],
-                $setListItem['set_sku'],
+                $setListItem['set_sku']
             );
         if($checkSetItem) {
             return $checkSetItem;

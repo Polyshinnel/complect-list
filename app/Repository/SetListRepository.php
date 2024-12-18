@@ -7,10 +7,9 @@ use Illuminate\Support\Collection;
 
 class SetListRepository
 {
-    public function getSetListItem(int $variantId, string $sku): ?SetList
+    public function getSetListItem(string $sku): ?SetList
     {
         $filter = [
-            'variant_id' => $variantId,
             'sku' => $sku
         ];
         return SetList::where($filter)->first();

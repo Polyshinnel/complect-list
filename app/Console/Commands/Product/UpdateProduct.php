@@ -37,11 +37,11 @@ class UpdateProduct extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle():int
     {
         $skuList = $this->productService->getDatabaseProductsSkuList();
         $products = $this->productRequest->getProductsBySku($skuList);
-        if($this->productService->checkProductUpdates($products, 90)) {
+        if($this->productService->checkProductUpdates($products, 70)) {
             $this->productService->updateProducts($products);
             echo "products updated successfully\n";
         } else {
