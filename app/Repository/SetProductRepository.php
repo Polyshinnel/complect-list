@@ -17,9 +17,16 @@ class SetProductRepository
         SetProduct::where(['id' => $productId])->update($updateArr);
     }
 
-    public function addSetProduct(array $createArr): void
+    public function addSetProduct(array $data)
     {
-        SetProduct::insert($createArr);
+        // Проверяем существование записи
+        $exists = SetProduct::where('set_id', $data['set_id'])
+            ->where('variant_id', $data['variant_id'])
+            ->exists();
+        
+        if (!$exists) {
+            return SetProduct::create($data);
+        }
     }
 
     public function deleteSetBySetIdProduct(int $setId): void
