@@ -64,12 +64,14 @@ class ProductService
                 $quantity = $product['quantity'];
                 $price = $product['price'];
                 $sku = $product['vendor_code'];
+                $optPrice = $product['opt_price'];
 
                 $productInfo = $this->productRepository->getProductBySku($sku);
                 if($productInfo->quantity != $quantity || $productInfo->price != $price){
                     $updateArr = [
                         'quantity' => $quantity,
-                        'price' => $price
+                        'price' => $price,
+                        'opt_price' => $optPrice
                     ];
                     $productInfo->update($updateArr);
                 }

@@ -74,20 +74,25 @@ class SetService
                 $quantity = 0;
                 $price = 0;
                 $productList = [];
+                $optPrice = 0;
 
                 if(!$setListProducts->isEmpty()) {
                     foreach ($setListProducts as $setListProduct) {
                         $productInfo = $setListProduct->getProductInfo;
                         $setCurrentQuantity = floor($productInfo-> quantity/ $setListProduct->set_quantity);
                         $setPrice = ceil($productInfo->price * $setListProduct->set_quantity);
+                        $setOptPrice = ceil($productInfo->opt_price * $setListProduct->set_quantity);
+
                         $productList[] = [
                             'quantity' => $productInfo->quantity,
                             'price' => $productInfo->price,
                             'set_required_quantity' => $setListProduct->set_quantity,
                             'set_price' => $setPrice,
                             'set_current_quantity' => (int)$setCurrentQuantity,
+                            'set_opt_price' => $setOptPrice
                         ];
                         $price += $setPrice;
+                        $optPrice += $setOptPrice;
                     }
                 }
 
@@ -102,6 +107,7 @@ class SetService
                 $updateArr = [
                     'price' => $price,
                     'quantity' => $quantity,
+                    'opt_price' => $optPrice
                 ];
                 $setListItem->update($updateArr);
             }
@@ -120,6 +126,7 @@ class SetService
                     'vendor_code' => $setListItem->sku,
                     'quantity' => $setListItem->quantity,
                     'vendor' => $setListItem->brand,
+                    'opt_price' => $setListItem->opt_price,
                     'picture' => NULL,
                 ];
             }
