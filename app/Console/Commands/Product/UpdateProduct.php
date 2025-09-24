@@ -41,8 +41,8 @@ class UpdateProduct extends Command
     {
         $skuList = $this->productService->getDatabaseProductsSkuList();
         foreach ($skuList as $provider => $sku) {
-            $products = $this->productRequest->getProductsBySku($provider, $skuList);
-            $this->productService->updateProducts($products);
+            $products = $this->productRequest->getProductsBySku($provider, $sku);
+            $this->productService->updateProducts($provider, $products);
         }
 
         return 0;
