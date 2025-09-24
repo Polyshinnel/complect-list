@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Http\Requests\ProductRequest;
 use App\Models\Product;
+use App\Models\Provider;
 use App\Repository\ProductRepository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -21,19 +22,21 @@ class ProductService
         $this->productRequest = $productRequest;
     }
 
-    public function getOrCreateProduct($product): ?Product
+    public function getOrCreateProduct($provider, $product): ?Product
     {
-        $productInfo = $this->productRepository->getProductBySku($product['sku']);
+        $providerData = Provider::where('name', $provider)->first();
+        $productInfo = $this->productRepository->getProductBySku($providerData->id, $product['sku']);
         if($productInfo){
             return $productInfo;
         } else {
-            $productRaw = $this->productRequest->getProductsBySku([$product['sku']]);
+            $productRaw = $this->productRequest->getProductsBySku($provider, [$product['sku']]);
             if($productRaw){
                 $createArr = [
                     'name' => $productRaw[0]['name'],
                     'sku' => $productRaw[0]['vendor_code'],
                     'price' => $productRaw[0]['price'],
-                    'quantity' => $productRaw[0]['quantity']
+                    'quantity' => $productRaw[0]['quantity'],
+                    'provider_id' => $providerData->id,
                 ];
                 return Product::create($createArr);
             } else {
@@ -48,17 +51,24 @@ class ProductService
     {
         $products = $this->productRepository->getAllProducts();
         $sku = [];
+        $providers = Provider::all();
+        $providersMap = [];
+        foreach($providers as $provider){
+            $providersMap[$provider->id] = $provider->name;
+        }
         if(!$products->isEmpty()){
             foreach($products as $product){
-                $sku[] = $product->sku;
+                $provider = $providersMap[$product->provider_id];
+                $sku[$provider][] = $product->sku;
             }
         }
 
         return $sku;
     }
 
-    public function updateProducts(array $products): void
+    public function updateProducts(string $provider, array $products): void
     {
+        $provider = Provider::where('name', $provider)->first();
         if($products) {
             foreach($products as $product){
                 $quantity = $product['quantity'];
@@ -66,7 +76,7 @@ class ProductService
                 $sku = $product['vendor_code'];
                 $optPrice = $product['opt_price'];
 
-                $productInfo = $this->productRepository->getProductBySku($sku);
+                $productInfo = $this->productRepository->getProductBySku($provider->id, $sku);
                 if($productInfo->quantity != $quantity || $productInfo->price != $price || $productInfo->opt_price != $optPrice){
                     $updateArr = [
                         'quantity' => $quantity,

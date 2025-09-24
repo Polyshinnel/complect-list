@@ -40,13 +40,9 @@ class UpdateProduct extends Command
     public function handle():int
     {
         $skuList = $this->productService->getDatabaseProductsSkuList();
-        $products = $this->productRequest->getProductsBySku($skuList);
-        if($this->productService->checkProductUpdates($products, 70)) {
+        foreach ($skuList as $provider => $sku) {
+            $products = $this->productRequest->getProductsBySku($provider, $skuList);
             $this->productService->updateProducts($products);
-            echo "products updated successfully\n";
-        } else {
-            Log::error('percent of products zero too high!');
-            echo "products update failed\n";
         }
 
         return 0;

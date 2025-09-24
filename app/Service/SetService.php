@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Models\Provider;
 use App\Models\SetList;
 use App\Repository\SetListRepository;
 use App\Repository\SetProductRepository;
@@ -23,28 +24,30 @@ class SetService
         $this->setProductRepository = $setProductRepository;
     }
 
-    public function processingSetList(array $setList): void
+    public function processingSetList(string $provider, array $setList): void
     {
-        $setListItemDB = $this->checkSetDb($setList);
+        $setListItemDB = $this->checkSetDb($provider, $setList);
         $setProducts = $setList['items'];
         if(!$setListItemDB) {
-            $productToSetArr = $this->setProductService->manageProductList($setProducts, $setListItemDB);
+            $productToSetArr = $this->setProductService->manageProductList($provider, $setProducts, $setListItemDB);
             if($productToSetArr) {
                 if($setList['brand']) {
-                    $setListItemDB = $this->addSetToDB($setList);
+                    $setListItemDB = $this->addSetToDB($provider, $setList);
                     $this->setProductService->addProductsToSet($setListItemDB, $productToSetArr);
                 }
             }
         } else {
-            $this->setProductService->manageProductList($setProducts, $setListItemDB);
+            $this->setProductService->manageProductList($provider, $setProducts, $setListItemDB);
         }
     }
 
-    public function checkSetDb(array $setListItem): ?SetList
+    public function checkSetDb(string $provider, array $setListItem): ?SetList
     {
+        $provider = Provider::where('name', $provider)->first();
         $checkSetItem = $this
             ->setListRepository
             ->getSetListItem(
+                $provider->id,
                 $setListItem['set_sku']
             );
         if($checkSetItem) {
@@ -53,13 +56,15 @@ class SetService
         return null;
     }
 
-    public function addSetToDB(array $setListItem): SetList
+    public function addSetToDB(string $provider, array $setListItem): SetList
     {
+        $provider = Provider::where('name', $provider)->first();
         $createArr = [
             'variant_id' => $setListItem['variant_id_set'],
             'name' => $setListItem['product_name'],
             'sku' => $setListItem['set_sku'],
-            'brand' => $setListItem['brand']
+            'brand' => $setListItem['brand'],
+            'provider_id' => $provider->id
         ];
 
         return $this->setListRepository->createSetList($createArr);

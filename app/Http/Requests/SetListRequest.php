@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Log;
 
 class SetListRequest
 {
-    public function getSetList() {
+    public function getFdSetListRequest() {
         $ch = curl_init('https://liberty-jones.ru/index.php?module=ListSetFDView&key=aZBcNu0V8mXA');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);

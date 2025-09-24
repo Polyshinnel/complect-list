@@ -7,9 +7,10 @@ use Illuminate\Support\Collection;
 
 class ProductRepository
 {
-    public function getProductBySku($sku): ?Product
+    public function getProductBySku(int $provider, string $sku): ?Product
     {
-        return Product::where(['sku' => $sku])->first();
+        $filter = ['sku' => $sku, 'provider_id' => $provider];
+        return Product::where($filter)->first();
     }
 
     public function createProduct($createArr): Product

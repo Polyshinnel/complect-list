@@ -25,7 +25,7 @@ class SetProductService
         $this->setListRepository = $setListRepository;
     }
 
-    public function manageProductList(array $setProductList, SetList $setListItemDB = null): array
+    public function manageProductList(string $provider, array $setProductList, SetList $setListItemDB = null): array
     {
         $productListReturn = [];
         $processedProductList = [];
@@ -39,7 +39,7 @@ class SetProductService
 
         if(!empty($processedProductList)) {
             foreach ($processedProductList as $product) {
-                $productDb = $this->productService->getOrCreateProduct($product);
+                $productDb = $this->productService->getOrCreateProduct($provider, $product);
                 if($productDb) {
                     $productListReturn[] = [
                         'product_id' => $productDb->id,

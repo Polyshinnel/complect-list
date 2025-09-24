@@ -4,11 +4,11 @@ namespace App\Http\Requests;
 
 class ProductRequest
 {
-    public function getProductsBySku(array $productSku): ?array
+    public function getProductsBySku(string $provider, array $productSku): ?array
     {
         $data = [
             'filter' => [
-                'provider' => 'FineDesign',
+                'provider' => $provider,
                 'vendorCode' => $productSku,
             ]
         ];

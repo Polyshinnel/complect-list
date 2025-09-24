@@ -44,13 +44,18 @@ class GetSetList extends Command
     public function handle(): int
     {
         $message = 'set list successfully saved';
-        $setList = $this->listRequest->getSetList();
-        if($setList){
-            foreach($setList as $set){
-                $this->service->processingSetList($set);
+        $setLists = [];
+        $fdSetList = $this->listRequest->getFdSetListRequest();
+
+        if($fdSetList){
+            $setLists['FineDesign'] = $fdSetList;
+        }
+
+
+        foreach($setLists as $provider => $sets){
+            foreach($sets as $set){
+                $this->service->processingSetList($provider, $set);
             }
-        } else {
-            $message = 'set list empty';
         }
 
         echo $message."\r\n";
