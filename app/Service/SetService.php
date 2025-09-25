@@ -119,10 +119,10 @@ class SetService
         }
     }
 
-    public function getSetList(): array
+    public function getSetList(int $providerId): array
     {
         $setList = [];
-        $setListCollection = $this->setListRepository->getSetListAll();
+        $setListCollection = $this->setListRepository->getSetListByProvider($providerId);
         if(!$setListCollection->isEmpty()) {
             foreach ($setListCollection as $setListItem) {
                 $setList[] = [

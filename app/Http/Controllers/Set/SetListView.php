@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 
 class SetListView extends BaseController
 {
-    public function __invoke()
+    public function __invoke(int $provider_id)
     {
-        $setList = $this->service->getSetList();
+        $setList = $this->service->getSetList($provider_id);
         return response()->json($setList);
     }
 }

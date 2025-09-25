@@ -31,6 +31,11 @@ class SetListRepository
         SetList::where(['id' => $id])->delete();
     }
 
+    public function getSetListByProvider(int $providerId): ?Collection
+    {
+        return SetList::where(['provider_id' => $providerId])->get();
+    }
+
     public function getSetListAll(): ?Collection
     {
         return SetList::all();

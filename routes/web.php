@@ -19,4 +19,4 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/get-set', SetListView::class);
+Route::get('/get-set/{provider_id}', SetListView::class);
