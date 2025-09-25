@@ -44,7 +44,7 @@ class UpdateProduct extends Command
             $products = $this->productRequest->getProductsBySku($provider, $sku);
             $this->productService->updateProducts($provider, $products);
         }
-
+        $this->info('Обновление товаров завершено');
         return 0;
     }
 }
