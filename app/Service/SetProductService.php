@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Models\SetList;
+use App\Models\SetProduct;
 use App\Repository\ProductRepository;
 use App\Repository\SetListRepository;
 use App\Repository\SetProductRepository;
@@ -32,7 +33,7 @@ class SetProductService
         if($setListItemDB) {
             $setListItemId = $setListItemDB->id;
             $setProductsDB = $this->setProductRepository->getSetProducts($setListItemId);
-            $processedProductList = $this->compareAndUpdateProductList($setProductsDB, $setProductList);
+            $processedProductList = $this->compareAndUpdateProductList($setProductsDB, $setProductList, $provider);
         } else {
             $processedProductList = $setProductList;
         }
@@ -61,23 +62,75 @@ class SetProductService
         return $productListReturn;
     }
 
-    public function compareAndUpdateProductList(Collection $setProductsDB, array $setProductList): array
+    public function compareAndUpdateProductList(Collection $setProductsDB, array $setProductList, $provider): array
     {
+        $diffProducts = [];
+
         if(!$setProductsDB->isEmpty()) {
-            foreach ($setProductsDB as $setProductDB) {
-                foreach ($setProductList as $key => $value) {
-                    if($setProductDB->variant_id == $value['variant_id']) {
-                        if($setProductDB->set_quantity != $value['count']) {
-                            $setProductId = $setProductDB->id;
-                            $this->setProductRepository->updateSetProduct($setProductId, ['set_quantity' => $value['count']]);
-                        }
-                        unset($setProductList[$key]);
-                    }
+            $setProductsDBArr = $setProductsDB->toArray();
+            $setProductsDbIndexed = [];
+            $incomingProductsIndexed = [];
+
+            foreach ($setProductsDBArr as $dbProduct) {
+                $key = $this->getProductKey($dbProduct['variant_id'], $dbProduct['sku']);
+                $setProductsDbIndexed[$key] = $dbProduct;
+            }
+
+            foreach ($setProductList as $product) {
+                $key = $this->getProductKey($product['variant_id'], $product['sku']);
+                $incomingProductsIndexed[$key] = $product;
+            }
+
+            foreach ($incomingProductsIndexed as $key => $product) {
+                if(!isset($setProductsDbIndexed[$key])) {
+                    $diffProducts[] = $product;
+                    continue;
+                }
+
+                $dbProduct = $setProductsDbIndexed[$key];
+                $dbCount = (int)($dbProduct['set_quantity'] ?? 0);
+                $incomingCount = (int)($product['count'] ?? 0);
+
+                if($dbCount !== $incomingCount) {
+                    $diffProducts[] = $product;
                 }
             }
 
+            foreach ($setProductsDbIndexed as $key => $dbProduct) {
+                if(!isset($incomingProductsIndexed[$key])) {
+                    $diffProducts[] = [
+                        'variant_id' => (string)$dbProduct['variant_id'],
+                        'sku' => $dbProduct['sku'],
+                        'count' => (int)($dbProduct['set_quantity'] ?? 0)
+                    ];
+                }
+            }
+
+            if(!empty($diffProducts)) {
+                $setId = $setProductsDB->first()->set_id;
+                SetProduct::where('set_id', $setId)->delete();
+                $setListItemDB = SetList::find($setId);
+                $productListReturn = [];
+                foreach ($setProductList as $product) {
+                    $productDb = $this->productService->getOrCreateProduct($provider, $product);
+                    if($productDb) {
+                        $productListReturn[] = [
+                            'product_id' => $productDb->id,
+                            'variant_id' => $product['variant_id'],
+                            'sku' => $productDb->sku,
+                            'count' => $product['count']
+                        ];
+                    } else {
+                        return ['error' => 'Product not found in ABC Service'];
+                    }
+                }
+
+                $this->addProductsToSet($setListItemDB, $productListReturn);
+
+            }
         }
-        return $setProductList;
+
+        return $diffProducts;
     }
 
     public function addProductsToSet(SetList $setListItemDB, array $products): void
@@ -92,5 +145,10 @@ class SetProductService
             ];
             $this->setProductRepository->addSetProduct($createArr);
         }
+    }
+
+    private function getProductKey($variantId, string $sku): string
+    {
+        return $sku . '_' . (string)$variantId;
     }
 }
