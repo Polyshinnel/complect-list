@@ -44,11 +44,14 @@ class FindSetDuplicates extends Command
         $progressBar->start();
 
         foreach ($setSkus as $sku) {
-            $sites = $this->findSitesBySku($sku);
+            $sitesData = $this->findSitesBySku($sku);
             
-            if (count($sites) > 1) {
-                // Если найден на нескольких сайтах - это дубль
-                $duplicates[$sku] = $sites;
+            if (count($sitesData) > 1) {
+                // Проверяем, есть ли различия в set_items между сайтами
+                if ($this->hasSetItemsDifferences($sitesData)) {
+                    // Формируем структуру для сохранения: сайт -> массив сайтов
+                    $duplicates[$sku] = array_keys($sitesData);
+                }
             }
 
             $progressBar->advance();
@@ -72,13 +75,14 @@ class FindSetDuplicates extends Command
 
     /**
      * Поиск сайтов, на которых найден комплект с указанным SKU
+     * Возвращает массив: [название_сайта => set_items]
      *
      * @param string $sku
      * @return array
      */
     private function findSitesBySku(string $sku): array
     {
-        $sites = [];
+        $sitesData = [];
 
         $ch = curl_init('https://herlitzbags.ru/index.php?module=ProductSkuView');
         curl_setopt($ch, CURLOPT_POST, true);
@@ -97,33 +101,121 @@ class FindSetDuplicates extends Command
 
         if ($error) {
             Log::warning("Ошибка при запросе для SKU {$sku}: {$error}");
-            return $sites;
+            return $sitesData;
         }
 
         if ($httpCode !== 200 || !$result) {
             Log::warning("Неверный ответ для SKU {$sku}: HTTP {$httpCode}");
-            return $sites;
+            return $sitesData;
         }
 
         $data = json_decode($result, true);
 
         if (!is_array($data)) {
             Log::warning("Неверный формат ответа для SKU {$sku}");
-            return $sites;
+            return $sitesData;
         }
 
-        // Извлекаем названия сайтов из ответа
+        // Извлекаем set_items для каждого сайта
         // Ответ содержит ключи верхнего уровня - это названия сайтов
-        // Каждый сайт содержит данные комплекта (ключ с ID) и set_items
         foreach ($data as $siteKey => $siteData) {
-            if (is_string($siteKey) && is_array($siteData)) {
-                // Ключ верхнего уровня - это название сайта
-                $sites[] = $siteKey;
+            if (is_string($siteKey) && is_array($siteData) && isset($siteData['set_items'])) {
+                $sitesData[$siteKey] = $siteData['set_items'];
             }
         }
 
-        // Убираем дубликаты
-        return array_unique($sites);
+        return $sitesData;
+    }
+
+    /**
+     * Проверяет, есть ли различия в set_items между сайтами
+     * Сравнивает по: количеству элементов, SKU каждого элемента, set_count каждого элемента
+     *
+     * @param array $sitesData Массив [название_сайта => set_items]
+     * @return bool
+     */
+    private function hasSetItemsDifferences(array $sitesData): bool
+    {
+        if (count($sitesData) < 2) {
+            return false;
+        }
+
+        // Нормализуем set_items для каждого сайта
+        $normalizedSets = [];
+        foreach ($sitesData as $siteName => $setItems) {
+            $normalizedSets[$siteName] = $this->normalizeSetItems($setItems);
+        }
+
+        // Сравниваем первый набор с остальными
+        $firstSite = array_key_first($normalizedSets);
+        $firstSet = $normalizedSets[$firstSite];
+
+        foreach ($normalizedSets as $siteName => $set) {
+            if ($siteName === $firstSite) {
+                continue;
+            }
+
+            // Сравниваем количество элементов
+            if (count($firstSet) !== count($set)) {
+                return true;
+            }
+
+            // Сравниваем каждый элемент по SKU и set_count
+            foreach ($firstSet as $key => $item) {
+                if (!isset($set[$key])) {
+                    return true;
+                }
+
+                // Сравниваем SKU
+                if ($item['sku'] !== $set[$key]['sku']) {
+                    return true;
+                }
+
+                // Сравниваем set_count
+                if ($item['set_count'] !== $set[$key]['set_count']) {
+                    return true;
+                }
+            }
+
+            // Проверяем, нет ли лишних элементов во втором наборе
+            foreach ($set as $key => $item) {
+                if (!isset($firstSet[$key])) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Нормализует set_items для сравнения
+     * Создает массив с ключами по SKU и значениями {sku, set_count}
+     *
+     * @param array $setItems
+     * @return array
+     */
+    private function normalizeSetItems(array $setItems): array
+    {
+        $normalized = [];
+
+        foreach ($setItems as $item) {
+            if (is_array($item) && isset($item['sku'])) {
+                $sku = $item['sku'];
+                $setCount = isset($item['set_count']) ? (string)$item['set_count'] : '0';
+                
+                // Используем SKU как ключ для уникальности
+                $normalized[$sku] = [
+                    'sku' => $sku,
+                    'set_count' => $setCount,
+                ];
+            }
+        }
+
+        // Сортируем по SKU для консистентного сравнения
+        ksort($normalized);
+
+        return $normalized;
     }
 }
 
