@@ -21,7 +21,7 @@ class SetProductRepository
     {
         // Проверяем существование записи
         $exists = SetProduct::where('set_id', $data['set_id'])
-            ->where('variant_id', $data['variant_id'])
+            ->where('product_id', $data['product_id'])
             ->exists();
         
         if (!$exists) {

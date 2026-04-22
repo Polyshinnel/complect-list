@@ -3,134 +3,78 @@
 namespace App\Service;
 
 use App\Models\SetList;
-use App\Models\SetProduct;
-use App\Repository\ProductRepository;
-use App\Repository\SetListRepository;
 use App\Repository\SetProductRepository;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class SetProductService
 {
     protected SetProductRepository $setProductRepository;
     protected ProductService $productService;
-    protected SetListRepository $setListRepository;
 
     public function __construct(
         SetProductRepository $setProductRepository,
-        ProductService $productService,
-        SetListRepository $setListRepository
+        ProductService $productService
     )
     {
         $this->setProductRepository = $setProductRepository;
         $this->productService = $productService;
-        $this->setListRepository = $setListRepository;
     }
 
     public function manageProductList(string $provider, array $setProductList, SetList $setListItemDB = null): array
     {
-        $productListReturn = [];
-        $processedProductList = [];
+        $normalizedSetProductList = $this->normalizeIncomingProductList($setProductList);
+
         if($setListItemDB) {
             $setListItemId = $setListItemDB->id;
             $setProductsDB = $this->setProductRepository->getSetProducts($setListItemId);
-            $processedProductList = $this->compareAndUpdateProductList($setProductsDB, $setProductList, $provider);
-        } else {
-            $processedProductList = $setProductList;
+            $this->compareAndUpdateProductList($setListItemDB, $setProductsDB, $normalizedSetProductList, $provider);
+
+            return [];
         }
 
-        if(!empty($processedProductList)) {
-            foreach ($processedProductList as $product) {
-                $productDb = $this->productService->getOrCreateProduct($provider, $product);
-                if($productDb) {
-                    $productListReturn[] = [
-                        'product_id' => $productDb->id,
-                        'variant_id' => $product['variant_id'],
-                        'sku' => $productDb->sku,
-                        'count' => $product['count']
-                    ];
-                } else {
-                    return [];
-                }
-            }
-        }
-
-        if($productListReturn && $setListItemDB) {
-            $this->addProductsToSet($setListItemDB, $productListReturn);
+        $productListReturn = $this->buildPreparedProductList($provider, $normalizedSetProductList);
+        if($productListReturn === null) {
             return [];
         }
 
         return $productListReturn;
     }
 
-    public function compareAndUpdateProductList(Collection $setProductsDB, array $setProductList, $provider): array
+    public function compareAndUpdateProductList(
+        SetList $setListItemDB,
+        Collection $setProductsDB,
+        array $setProductList,
+        string $provider
+    ): bool
     {
-        $diffProducts = [];
-
-        if(!$setProductsDB->isEmpty()) {
-            $setProductsDBArr = $setProductsDB->toArray();
-            $setProductsDbIndexed = [];
-            $incomingProductsIndexed = [];
-
-            foreach ($setProductsDBArr as $dbProduct) {
-                $key = $this->getProductKey($dbProduct['variant_id'], $dbProduct['sku']);
-                $setProductsDbIndexed[$key] = $dbProduct;
+        if($setProductsDB->isEmpty()) {
+            $productListReturn = $this->buildPreparedProductList($provider, $setProductList);
+            if($productListReturn === null) {
+                return false;
             }
 
-            foreach ($setProductList as $product) {
-                $key = $this->getProductKey($product['variant_id'], $product['sku']);
-                $incomingProductsIndexed[$key] = $product;
-            }
+            $this->addProductsToSet($setListItemDB, $productListReturn);
 
-            foreach ($incomingProductsIndexed as $key => $product) {
-                if(!isset($setProductsDbIndexed[$key])) {
-                    $diffProducts[] = $product;
-                    continue;
-                }
-
-                $dbProduct = $setProductsDbIndexed[$key];
-                $dbCount = (int)($dbProduct['set_quantity'] ?? 0);
-                $incomingCount = (int)($product['count'] ?? 0);
-
-                if($dbCount !== $incomingCount) {
-                    $diffProducts[] = $product;
-                }
-            }
-
-            foreach ($setProductsDbIndexed as $key => $dbProduct) {
-                if(!isset($incomingProductsIndexed[$key])) {
-                    $diffProducts[] = [
-                        'variant_id' => (string)$dbProduct['variant_id'],
-                        'sku' => $dbProduct['sku'],
-                        'count' => (int)($dbProduct['set_quantity'] ?? 0)
-                    ];
-                }
-            }
-
-            if(!empty($diffProducts)) {
-                $setId = $setProductsDB->first()->set_id;
-                SetProduct::where('set_id', $setId)->delete();
-                $setListItemDB = SetList::find($setId);
-                $productListReturn = [];
-                foreach ($setProductList as $product) {
-                    $productDb = $this->productService->getOrCreateProduct($provider, $product);
-                    if($productDb) {
-                        $productListReturn[] = [
-                            'product_id' => $productDb->id,
-                            'variant_id' => $product['variant_id'],
-                            'sku' => $productDb->sku,
-                            'count' => $product['count']
-                        ];
-                    } else {
-                        return ['error' => 'Product not found in ABC Service'];
-                    }
-                }
-
-                $this->addProductsToSet($setListItemDB, $productListReturn);
-
-            }
+            return true;
         }
 
-        return $diffProducts;
+        [$setProductsDbIndexed, $dbHasDuplicates] = $this->normalizePersistedProductList($setProductsDB);
+        $incomingProductsIndexed = $this->indexIncomingProductList($setProductList);
+
+        if(!$dbHasDuplicates && !$this->hasProductDifferences($setProductsDbIndexed, $incomingProductsIndexed)) {
+            return false;
+        }
+
+        $productListReturn = $this->buildPreparedProductList($provider, $setProductList);
+        if($productListReturn === null) {
+            return false;
+        }
+
+        $this->setProductRepository->deleteSetBySetIdProduct($setListItemDB->id);
+        $this->addProductsToSet($setListItemDB, $productListReturn);
+
+        return true;
     }
 
     public function addProductsToSet(SetList $setListItemDB, array $products): void
@@ -147,8 +91,138 @@ class SetProductService
         }
     }
 
-    private function getProductKey($variantId, string $sku): string
+    private function buildPreparedProductList(string $provider, array $setProductList): ?array
     {
-        return $sku . '_' . (string)$variantId;
+        $productListReturn = [];
+
+        foreach ($setProductList as $product) {
+            $productDb = $this->productService->getOrCreateProduct($provider, $product);
+            if(!$productDb) {
+                return null;
+            }
+
+            $productListReturn[] = [
+                'product_id' => $productDb->id,
+                'variant_id' => $product['variant_id'],
+                'sku' => $productDb->sku,
+                'count' => $product['count']
+            ];
+        }
+
+        return $productListReturn;
+    }
+
+    private function normalizeIncomingProductList(array $setProductList): array
+    {
+        $normalizedProducts = [];
+
+        foreach ($setProductList as $product) {
+            if(empty($product['sku'])) {
+                continue;
+            }
+
+            $key = $this->getProductKey($product['sku']);
+            $preparedProduct = [
+                'variant_id' => (int)($product['variant_id'] ?? 0),
+                'sku' => $product['sku'],
+                'count' => (int)($product['count'] ?? 0),
+            ];
+
+            if(isset($normalizedProducts[$key])) {
+                $existingProduct = $normalizedProducts[$key];
+                if($existingProduct['count'] !== $preparedProduct['count']) {
+                    Log::warning('Set item duplicated with different quantity. Keeping the first occurrence.', [
+                        'sku' => $preparedProduct['sku'],
+                        'kept_variant_id' => $existingProduct['variant_id'],
+                        'discarded_variant_id' => $preparedProduct['variant_id'],
+                        'kept_count' => $existingProduct['count'],
+                        'discarded_count' => $preparedProduct['count'],
+                    ]);
+                }
+
+                continue;
+            }
+
+            $normalizedProducts[$key] = $preparedProduct;
+        }
+
+        return array_values($normalizedProducts);
+    }
+
+    private function normalizePersistedProductList(Collection $setProductsDB): array
+    {
+        $normalizedProducts = [];
+        $hasDuplicates = false;
+
+        foreach ($setProductsDB as $dbProduct) {
+            $sku = $dbProduct['sku'];
+            $key = $this->getProductKey($sku);
+            $preparedProduct = [
+                'sku' => $sku,
+                'count' => (int)($dbProduct['set_quantity'] ?? 0),
+            ];
+
+            if(isset($normalizedProducts[$key])) {
+                $hasDuplicates = true;
+
+                if($normalizedProducts[$key]['count'] !== $preparedProduct['count']) {
+                    Log::warning('Persisted set contains duplicated SKU rows with different quantities.', [
+                        'set_id' => $dbProduct['set_id'] ?? null,
+                        'sku' => $sku,
+                        'kept_count' => $normalizedProducts[$key]['count'],
+                        'duplicate_count' => $preparedProduct['count'],
+                    ]);
+                }
+
+                continue;
+            }
+
+            $normalizedProducts[$key] = $preparedProduct;
+        }
+
+        return [$normalizedProducts, $hasDuplicates];
+    }
+
+    private function indexIncomingProductList(array $setProductList): array
+    {
+        $indexedProducts = [];
+
+        foreach ($setProductList as $product) {
+            $indexedProducts[$this->getProductKey($product['sku'])] = [
+                'sku' => $product['sku'],
+                'count' => (int)($product['count'] ?? 0),
+            ];
+        }
+
+        return $indexedProducts;
+    }
+
+    private function hasProductDifferences(array $setProductsDbIndexed, array $incomingProductsIndexed): bool
+    {
+        foreach ($incomingProductsIndexed as $key => $product) {
+            if(!isset($setProductsDbIndexed[$key])) {
+                return true;
+            }
+
+            $dbCount = (int)($setProductsDbIndexed[$key]['count'] ?? 0);
+            $incomingCount = (int)($product['count'] ?? 0);
+
+            if($dbCount !== $incomingCount) {
+                return true;
+            }
+        }
+
+        foreach ($setProductsDbIndexed as $key => $dbProduct) {
+            if(!isset($incomingProductsIndexed[$key])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function getProductKey(string $sku): string
+    {
+        return trim($sku);
     }
 }

@@ -1,0 +1,67 @@
+name: ${COMPOSE_PROJECT_NAME:-complectkidsberryorg}
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        WWWUSER: ${WWWUSER:-1000}
+        WWWGROUP: ${WWWGROUP:-1000}
+    working_dir: /var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost:${APP_PORT:-8082}}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-complect}
+      DB_USERNAME: ${DB_USERNAME:-complect}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      COMPOSER_HOME: /tmp/composer-cache
+    volumes:
+      - ./:/var/www/html
+      - composer-cache:/tmp/composer-cache
+    ports:
+      - "${APP_PORT:-8082}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    networks:
+      - app
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-complect}
+      MYSQL_USER: ${DB_USERNAME:-complect}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    ports:
+      - "${FORWARD_DB_PORT:-3308}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-complectkidsberryorg}_network
+
+volumes:
+  composer-cache:
+    name: ${COMPOSE_PROJECT_NAME:-complectkidsberryorg}_composer_cache
+  mysql-data:
+    name: ${COMPOSE_PROJECT_NAME:-complectkidsberryorg}_mysql_data
